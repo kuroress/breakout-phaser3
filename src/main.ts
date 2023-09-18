@@ -6,9 +6,15 @@ class MainScene extends Phaser.Scene {
     super({ key: "main" });
   }
 
+  preload() {
+    this.load.image("circle", "circle.png");
+  }
+
   create() {
-    console.log(this.scene.key + ".create()");
-    create_box(this)
+    this.matter.world
+      .setBounds(0, 0, this.sys.canvas.width, this.sys.canvas.height, 32)
+      .disableGravity();
+    let ball = create_ball(this, 8).setPosition().setVelocity(10, 10);
   }
 
   update(t: number, dt: number) {
@@ -18,22 +24,27 @@ class MainScene extends Phaser.Scene {
   }
 }
 
-function create_box(scene: Phaser.Scene): Phaser.GameObjects.GameObject {
-  let box = scene.add
-    .rectangle()
-    .setOrigin(0, 0)
-    .setPosition(100, 100)
-    .setSize(200, 100)
-    .setFillStyle(0xff0000, 0.5);
-  let state = { vx: 1.0 };
-  box.setInteractive().on(Phaser.Input.Events.POINTER_DOWN, () => {
-    console.log("clicked");
-    state.vx *= -1;
-  });
-  box.on("update", function (t: number, dt: number) {
-    box.setPosition(box.x + state.vx, box.y);
-  });
-  return box;
+function create_ball(
+  scene: Phaser.Scene,
+  radius: number
+): Phaser.Physics.Matter.Image {
+  return scene.matter.add
+    .image(0, 0, "circle")
+    .setDisplaySize(2 * radius, 2 * radius)
+    .setCircle(radius)
+    .setFixedRotation()
+    .setBounce(1)
+    .setFriction(0, 0, 0);
 }
 
-let game = new Phaser.Game({ width: 800, height: 600, scene: [MainScene] });
+let game = new Phaser.Game({
+  width: 800,
+  height: 600,
+  scene: [MainScene],
+  physics: {
+    default: "matter",
+    matter: {
+      enableSleeping: true,
+    },
+  },
+});
