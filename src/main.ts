@@ -17,20 +17,44 @@ class MainScene extends Phaser.Scene {
     this.matter.world.setBounds(0, 0, w, h, 32).disableGravity();
     let ball = create_ball(this, 8)
       .setPosition((1 / 2) * w, (1 / 2) * h)
-      .setVelocity(10, 10);
+      .setVelocity(5, 5);
     let paddle = create_paddle(this, keys).setPosition(
       (1 / 2) * w,
       (3 / 4) * h
     );
     let blocks = create_blocks(this);
+
+    let border = crete_border(this);
+    border.on("game over", () => {
+      this.add.text(w / 2, h / 2, "Game Over", {fontSize: 50}).setOrigin(0.5, 0.5);
+      this.children.each((c) => c.setActive(false));
+      this.matter.pause();
+    });
+
     let score = create_score(this, blocks.flat());
   }
 
   update(t: number, dt: number) {
     this.children.each((c) => {
-      c.emit("update", t, dt);
+      if (c.active) {
+        c.emit("update", t, dt);
+      }
     });
   }
+}
+
+function crete_border(scene: Phaser.Scene): Phaser.GameObjects.GameObject {
+  let [w, h] = [scene.sys.canvas.width, scene.sys.canvas.height];
+  let obj = scene.matter.add
+    .image(0, 0, "square")
+    .setAlpha(0)
+    .setDisplaySize(w, 30)
+    .setRectangle(w, 30)
+    .setPosition(w / 2, h - 15)
+    .setStatic(true);
+  return obj.setOnCollide((e) => {
+    obj.emit("game over");
+  });
 }
 
 function create_score(
