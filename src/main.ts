@@ -11,8 +11,18 @@ class MainScene extends Phaser.Scene {
     this.load.image("square", "square.png");
   }
 
+  _pause() {
+    this.children.each((c) => c.setActive(false));
+    this.matter.pause();
+  }
+
+  _resume() {
+    this.children.each((c) => c.setActive(true));
+    this.matter.resume();
+  }
+
   create() {
-    let keys = this.input.keyboard?.addKeys("W,S,A,D");
+    let keys = this.input.keyboard?.addKeys("R,W,S,A,D");
     let [w, h] = [this.sys.canvas.width, this.sys.canvas.height];
     this.matter.world.setBounds(0, 0, w, h, 32).disableGravity();
     let ball = create_ball(this, 8)
@@ -23,12 +33,30 @@ class MainScene extends Phaser.Scene {
       (3 / 4) * h
     );
     let blocks = create_blocks(this);
-
     let border = crete_border(this);
+    let startText = this.add
+      .text(w / 2, h / 2, "Start", { fontSize: 50 })
+      .setOrigin(0.5, 0.5)
+      .setVisible(false);
+    let gameOverText = this.add
+      .text(w / 2, h / 2, "Game Over", { fontSize: 50 })
+      .setOrigin(0.5, 0.5)
+      .setVisible(false);
+
+    startText.setVisible(true)
+    this._pause();
+    keys.R.once("down", () => {
+      startText.setVisible(false)
+      this._resume();
+    });
+
     border.on("game over", () => {
-      this.add.text(w / 2, h / 2, "Game Over", {fontSize: 50}).setOrigin(0.5, 0.5);
-      this.children.each((c) => c.setActive(false));
-      this.matter.pause();
+      gameOverText.setVisible(true);
+      this._pause();
+      keys.R.once("down", () => {
+        gameOverText.setVisible(false);
+        this._resume();
+      });
     });
 
     let score = create_score(this, blocks.flat());
