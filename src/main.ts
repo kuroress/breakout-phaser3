@@ -11,29 +11,15 @@ class MainScene extends Phaser.Scene {
     this.load.image("square", "square.png");
   }
 
-  _pause() {
-    this.children.each((c) => c.setActive(false));
-    this.matter.pause();
-  }
-
-  _resume() {
-    this.children.each((c) => c.setActive(true));
-    this.matter.resume();
-  }
-
   create() {
     let keys = this.input.keyboard?.addKeys("R,W,S,A,D");
     let [w, h] = [this.sys.canvas.width, this.sys.canvas.height];
     this.matter.world.setBounds(0, 0, w, h, 32).disableGravity();
-    let ball = create_ball(this, 8)
-      .setPosition((1 / 2) * w, (1 / 2) * h)
-      .setVelocity(5, 5);
-    let paddle = create_paddle(this, keys).setPosition(
-      (1 / 2) * w,
-      (3 / 4) * h
-    );
+    let ball = create_ball(this, 8);
+    let paddle = create_paddle(this, keys);
     let blocks = create_blocks(this);
-    let border = crete_border(this);
+    let border = create_border(this);
+    let [score, reset_score] = create_score(this, blocks.flat());
     let startText = this.add
       .text(w / 2, h / 2, "Start", { fontSize: 50 })
       .setOrigin(0.5, 0.5)
@@ -43,23 +29,46 @@ class MainScene extends Phaser.Scene {
       .setOrigin(0.5, 0.5)
       .setVisible(false);
 
-    startText.setVisible(true)
-    this._pause();
-    keys.R.once("down", () => {
-      startText.setVisible(false)
-      this._resume();
-    });
-
-    border.on("game over", () => {
+    let pause = () => {
+      this.children.each((c) => c.setActive(false));
+      this.matter.pause();
+    };
+    let resume = () => {
+      this.children.each((c) => c.setActive(true));
+      this.matter.resume();
+    };
+    let reset = () => {
+      ball.setPosition((1 / 2) * w, (1 / 2) * h).setVelocity(5, 5);
+      paddle.setPosition((1 / 2) * w, (3 / 4) * h);
+      blocks
+        .flat()
+        .forEach((block) =>
+          block.setActive(true).setVisible(true).setCollisionCategory(1)
+        );
+      reset_score();
+    };
+    let start = () => {
+      reset();
+      startText.setVisible(true);
+      pause();
+      keys.R.once("down", () => {
+        startText.setVisible(false);
+        resume();
+      });
+    };
+    let gameOver = () => {
       gameOverText.setVisible(true);
-      this._pause();
+      pause();
       keys.R.once("down", () => {
         gameOverText.setVisible(false);
-        this._resume();
+        start();
       });
-    });
+    };
 
-    let score = create_score(this, blocks.flat());
+    start();
+    border.on("game over", () => {
+      gameOver();
+    });
   }
 
   update(t: number, dt: number) {
@@ -71,7 +80,7 @@ class MainScene extends Phaser.Scene {
   }
 }
 
-function crete_border(scene: Phaser.Scene): Phaser.GameObjects.GameObject {
+function create_border(scene: Phaser.Scene): Phaser.GameObjects.GameObject {
   let [w, h] = [scene.sys.canvas.width, scene.sys.canvas.height];
   let obj = scene.matter.add
     .image(0, 0, "square")
@@ -88,7 +97,7 @@ function crete_border(scene: Phaser.Scene): Phaser.GameObjects.GameObject {
 function create_score(
   scene: Phaser.Scene,
   sources: Phaser.Events.EventEmitter[]
-): Phaser.GameObjects.GameObject {
+): [Phaser.GameObjects.GameObject, CallableFunction] {
   let [w, h] = [scene.sys.canvas.width, scene.sys.canvas.height];
   let state = { score: 0 };
   let obj = scene.add.text(0, h, "Score: " + state.score, {}).setOrigin(0, 1);
@@ -98,7 +107,11 @@ function create_score(
       obj.setText("Score: " + state.score);
     });
   });
-  return obj;
+  let reset = () => {
+    state.score = 0;
+    obj.setText("Score: " + state.score);
+  };
+  return [obj, reset];
 }
 
 function create_ball(
@@ -166,7 +179,10 @@ function create_block(scene: Phaser.Scene): Phaser.Physics.Matter.Image {
     .setOnCollide((e) => {
       if (e.bodyA.gameObject.name == "ball") {
         e.bodyB.gameObject.emit("get score", 10);
-        e.bodyB.gameObject.destroy();
+        e.bodyB.gameObject
+          .setVisible(false)
+          .setActive(false)
+          .setCollisionCategory(null);
       }
     });
 }
