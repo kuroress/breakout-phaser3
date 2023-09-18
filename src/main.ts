@@ -23,6 +23,7 @@ class MainScene extends Phaser.Scene {
       (3 / 4) * h
     );
     let blocks = create_blocks(this);
+    let score = create_score(this, blocks.flat());
   }
 
   update(t: number, dt: number) {
@@ -30,6 +31,22 @@ class MainScene extends Phaser.Scene {
       c.emit("update", t, dt);
     });
   }
+}
+
+function create_score(
+  scene: Phaser.Scene,
+  sources: Phaser.Events.EventEmitter[]
+): Phaser.GameObjects.GameObject {
+  let [w, h] = [scene.sys.canvas.width, scene.sys.canvas.height];
+  let state = { score: 0 };
+  let obj = scene.add.text(0, h, "Score: " + state.score, {}).setOrigin(0, 1);
+  sources.forEach((x) => {
+    x.on("get score", (score: number) => {
+      state.score += score;
+      obj.setText("Score: " + state.score);
+    });
+  });
+  return obj;
 }
 
 function create_ball(
@@ -69,7 +86,7 @@ function create_paddle(
 
 function create_blocks(scene: Phaser.Scene): Phaser.Physics.Matter.Image[][] {
   let pad = 10;
-  let [w, h] = [scene.sys.canvas.width, scene.sys.canvas.height/2];
+  let [w, h] = [scene.sys.canvas.width, scene.sys.canvas.height / 2];
   let [bw, bh] = [50, 30];
   let [rows, cols] = [8, 14];
 
@@ -81,11 +98,8 @@ function create_blocks(scene: Phaser.Scene): Phaser.Physics.Matter.Image[][] {
   let blocks = Array.from(Array(rows).keys()).map((i) =>
     Array.from(Array(cols).keys())
       .map((j) => [x0 + j * (bw + ws), y0 + i * (bh + hs)])
-      .map((p) => {
-        create_block(scene).setPosition(...p);
-      })
+      .map((p) => create_block(scene).setPosition(...p))
   );
-  console.log(blocks);
   return blocks;
 }
 
@@ -99,6 +113,7 @@ function create_block(scene: Phaser.Scene): Phaser.Physics.Matter.Image {
     .setStatic(true)
     .setOnCollide((e) => {
       if (e.bodyA.gameObject.name == "ball") {
+        e.bodyB.gameObject.emit("get score", 10);
         e.bodyB.gameObject.destroy();
       }
     });
