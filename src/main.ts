@@ -13,7 +13,6 @@ class MainScene extends Phaser.Scene {
 
   create() {
     let keys = this.input.keyboard?.addKeys("W,S,A,D");
-    console.log(keys);
     let [w, h] = [this.sys.canvas.width, this.sys.canvas.height];
     this.matter.world.setBounds(0, 0, w, h, 32).disableGravity();
     let ball = create_ball(this, 8)
@@ -23,6 +22,7 @@ class MainScene extends Phaser.Scene {
       (1 / 2) * w,
       (3 / 4) * h
     );
+    let blocks = create_blocks(this);
   }
 
   update(t: number, dt: number) {
@@ -42,7 +42,9 @@ function create_ball(
     .setCircle(radius)
     .setFixedRotation()
     .setBounce(1)
-    .setFriction(0, 0, 0);
+    .setFriction(0, 0, 0)
+    .setName("ball")
+    .setData("name", "ball");
 }
 
 function create_paddle(
@@ -57,13 +59,41 @@ function create_paddle(
     .setStatic(true)
     .on("update", () => {
       let vx = 0;
-      console.log("foo");
       if (keys.D.isDown) vx += 1;
       if (keys.A.isDown) vx += -1;
       obj.setPosition(obj.x + vx * 10, obj.y);
     });
 
   return obj;
+}
+
+function create_blocks(scene: Phaser.Scene): Phaser.Physics.Matter.Image[][] {
+  let [rows, cols] = [5, 10];
+  let blocks = Array.from(Array(rows).keys())
+    .map((i) => 30 + (30 + 10) * i)
+    .map((y) =>
+      Array.from(Array(cols).keys())
+        .map((j) => 30 + 60 * j)
+        .map((x) => {
+          create_block(scene).setPosition(x, y);
+        })
+    );
+  return blocks;
+}
+
+function create_block(scene: Phaser.Scene): Phaser.Physics.Matter.Image {
+  return scene.matter.add
+    .image(0, 0, "square")
+    .setDisplaySize(50, 30)
+    .setRectangle(50, 30)
+    .setFixedRotation()
+    .setBounce(1)
+    .setStatic(true)
+    .setOnCollide((e) => {
+      if (e.bodyA.gameObject.name == "ball") {
+        e.bodyB.gameObject.destroy();
+      }
+    });
 }
 
 let game = new Phaser.Game({
