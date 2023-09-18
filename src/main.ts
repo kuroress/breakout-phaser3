@@ -68,16 +68,24 @@ function create_paddle(
 }
 
 function create_blocks(scene: Phaser.Scene): Phaser.Physics.Matter.Image[][] {
-  let [rows, cols] = [5, 10];
-  let blocks = Array.from(Array(rows).keys())
-    .map((i) => 30 + (30 + 10) * i)
-    .map((y) =>
-      Array.from(Array(cols).keys())
-        .map((j) => 30 + 60 * j)
-        .map((x) => {
-          create_block(scene).setPosition(x, y);
-        })
-    );
+  let pad = 10;
+  let [w, h] = [scene.sys.canvas.width, scene.sys.canvas.height/2];
+  let [bw, bh] = [50, 30];
+  let [rows, cols] = [8, 14];
+
+  let [x0, y0] = [pad + bw / 2, pad + bh / 2];
+  let [ws, hs] = [
+    (w - 2 * pad - bw * cols) / (cols - 1),
+    (h - 2 * pad - bh * rows) / (rows - 1),
+  ];
+  let blocks = Array.from(Array(rows).keys()).map((i) =>
+    Array.from(Array(cols).keys())
+      .map((j) => [x0 + j * (bw + ws), y0 + i * (bh + hs)])
+      .map((p) => {
+        create_block(scene).setPosition(...p);
+      })
+  );
+  console.log(blocks);
   return blocks;
 }
 
